@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  log-ingestion:
+    build:
+      context: ../services/log-ingestion
+      dockerfile: ../../docker/log-ingestion.Dockerfile
+    ports:
+      - "${SERVER_PORT:-8080}:${SERVER_PORT:-8080}"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-user}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - DB_NAME=${DB_NAME:-logs}
+      - SERVER_HOST=${SERVER_HOST:-0.0.0.0}
+      - SERVER_PORT=${SERVER_PORT:-8080}
+    depends_on:
+      - db
+    env_file:
+      - ../.env
+
+  analytics:
+    build:
+      context: ../services/analytics
+      dockerfile: ../../docker/analytics.Dockerfile
+    depends_on:
+      - log-ingestion
+    env_file:
+      - ../.env
+
+  db:
+    image: postgres:latest
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${DB_USER:-user}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-password}
+      - POSTGRES_DB=${DB_NAME:-logs}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    env_file:
+      - ../.env
+
+volumes:
+  db_data:

@@ -1,0 +1,8 @@
+CREATE TABLE logs (
+    id SERIAL PRIMARY KEY,
+    timestamp TIMESTAMPTZ NOT NULL,
+    level VARCHAR(50) NOT NULL,
+    message TEXT NOT NULL,
+    source VARCHAR(100),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
