@@ -5,10 +5,15 @@ Provides functions to retrieve log data from PostgreSQL database
 
 import os
 import psycopg2
+import time
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 from pathlib import Path
+from structured_logger import create_logger_from_env, performance_monitor, log_context
+
+# Initialize structured logger
+logger = create_logger_from_env("analytics", "database")
 
 class DatabaseConnector:
     """Database connector for analytics service."""
@@ -19,34 +24,56 @@ class DatabaseConnector:
     
     def load_config(self):
         """Load database configuration from environment variables."""
-        # Load .env from project root
-        env_path = Path(__file__).resolve().parents[2] / '.env'
-        load_dotenv(dotenv_path=env_path)
-        
-        self.config = {
-            'host': os.getenv('DB_HOST', 'localhost'),
-            'port': int(os.getenv('DB_PORT', 5432)),
-            'user': os.getenv('DB_USER', ''),
-            'password': os.getenv('DB_PASSWORD', ''),
-            'database': os.getenv('DB_NAME', 'log_processing_db')
-        }
-        
-        # Build connection string
-        self.connection_string = (
-            f"host={self.config['host']} "
-            f"port={self.config['port']} "
-            f"user={self.config['user']} "
-            f"password={self.config['password']} "
-            f"dbname={self.config['database']}"
-        )
+        with log_context(operation="load_config"):
+            logger.debug("Loading database configuration")
+            
+            # Load .env from project root
+            env_path = Path(__file__).resolve().parents[2] / '.env'
+            load_dotenv(dotenv_path=env_path)
+            
+            self.config = {
+                'host': os.getenv('DB_HOST', 'localhost'),
+                'port': int(os.getenv('DB_PORT', 5432)),
+                'user': os.getenv('DB_USER', ''),
+                'password': os.getenv('DB_PASSWORD', ''),
+                'database': os.getenv('DB_NAME', 'log_processing_db')
+            }
+            
+            logger.info("Database configuration loaded", 
+                       db_host=self.config['host'],
+                       db_port=self.config['port'],
+                       db_name=self.config['database'],
+                       db_user=self.config['user'])
+            
+            # Build connection string (don't log password)
+            self.connection_string = (
+                f"host={self.config['host']} "
+                f"port={self.config['port']} "
+                f"user={self.config['user']} "
+                f"password={self.config['password']} "
+                f"dbname={self.config['database']}"
+            )
     
+    @performance_monitor(logger, "database_connect")
     def connect(self) -> bool:
         """Establish database connection."""
         try:
+            logger.info("Attempting to connect to database", 
+                       db_host=self.config['host'],
+                       db_name=self.config['database'])
+            
             self.connection = psycopg2.connect(self.connection_string)
+            self.connection.autocommit = False
+            
+            logger.info("Database connection established successfully")
             return True
+            
         except psycopg2.Error as e:
-            print(f"Database connection failed: {e}")
+            logger.error("Database connection failed", 
+                        error=str(e),
+                        error_type=type(e).__name__,
+                        db_host=self.config['host'],
+                        db_name=self.config['database'])
             return False
     
     def disconnect(self):

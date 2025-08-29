@@ -1,10 +1,16 @@
 import re
 import json
+import time
 from datetime import datetime, timedelta
 from collections import defaultdict, Counter
 from typing import List, Dict, Any, Tuple
 import statistics
+from structured_logger import create_logger_from_env, performance_monitor, log_context
 
+# Initialize structured logger
+logger = create_logger_from_env("analytics", "analyzer")
+
+@performance_monitor(logger, "analyze_error_frequency")
 def analyze_error_frequency(logs: List[Dict]) -> Dict[str, Any]:
     """
     Advanced error frequency analysis with time-based patterns.
@@ -15,30 +21,36 @@ def analyze_error_frequency(logs: List[Dict]) -> Dict[str, Any]:
     Returns:
         Dict containing comprehensive error analysis
     """
-    error_analysis = {
-        'total_errors': 0,
-        'error_rate': 0.0,
-        'errors_by_level': defaultdict(int),
-        'errors_by_source': defaultdict(int),
-        'error_patterns': [],
-        'time_distribution': defaultdict(int),
-        'severity_score': 0
-    }
-    
-    total_logs = len(logs)
-    if total_logs == 0:
-        return error_analysis
-    
-    # Define severity weights
-    severity_weights = {
-        'fatal': 10,
-        'error': 5,
-        'warn': 2,
-        'info': 1,
-        'debug': 0.5
-    }
-    
-    total_severity = 0
+    with log_context(operation="analyze_error_frequency", log_count=len(logs)):
+        logger.info("Starting error frequency analysis")
+        
+        error_analysis = {
+            'total_errors': 0,
+            'error_rate': 0.0,
+            'errors_by_level': defaultdict(int),
+            'errors_by_source': defaultdict(int),
+            'error_patterns': [],
+            'time_distribution': defaultdict(int),
+            'severity_score': 0
+        }
+        
+        total_logs = len(logs)
+        if total_logs == 0:
+            logger.warning("No logs provided for error frequency analysis")
+            return error_analysis
+        
+        logger.debug(f"Processing {total_logs} logs for error analysis")
+        
+        # Define severity weights
+        severity_weights = {
+            'fatal': 10,
+            'error': 5,
+            'warn': 2,
+            'info': 1,
+            'debug': 0.5
+        }
+        
+        total_severity = 0
     
     for log in logs:
         if isinstance(log, dict):
