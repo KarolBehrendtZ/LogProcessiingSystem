@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"../logger"
+	"log-processing-system/services/log-ingestion/logger"
 )
 
 // LoggingMiddleware wraps HTTP handlers with structured logging

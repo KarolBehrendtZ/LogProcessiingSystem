@@ -284,7 +284,7 @@ def generate_test_summary():
     for feature in features_tested:
         print(feature)
     
-    print("\nRECOMMENDations:")
+    print("\nRECOMMENDATIONS:")
     print("1. Review log output for proper JSON formatting")
     print("2. Verify log levels are respected in production")
     print("3. Test log aggregation with your monitoring system")
