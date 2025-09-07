@@ -397,7 +397,7 @@ class TestRunner:
         for category, tests in self.results.items():
             if isinstance(tests, dict):
                 for test_name, result in tests.items():
-                    if result.get('status') == 'failed':
+                    if isinstance(result, dict) and result.get('status') == 'failed':
                         failed_tests.append(f"{category}.{test_name}")
         
         if failed_tests:
@@ -408,21 +408,21 @@ class TestRunner:
         for category, tests in self.results.items():
             if isinstance(tests, dict):
                 for test_name, result in tests.items():
-                    if result.get('status') == 'skipped':
+                    if isinstance(result, dict) and result.get('status') == 'skipped':
                         skipped_tests.append(f"{category}.{test_name}")
         
         if skipped_tests:
             recommendations.append(f"Investigate skipped tests: {', '.join(skipped_tests)}")
         
         # Performance recommendations
-        if self.results['total_duration'] > 300:  # 5 minutes
+        if self.results.get('total_duration', 0) > 300:  # 5 minutes
             recommendations.append("Consider optimizing test performance - tests taking too long")
         
         # Coverage recommendations
         for category, tests in self.results.items():
             if isinstance(tests, dict):
                 for test_name, result in tests.items():
-                    if result.get('coverage') and 'coverage:' in result['coverage']:
+                    if isinstance(result, dict) and result.get('coverage') and 'coverage:' in result['coverage']:
                         coverage_line = result['coverage']
                         # Extract coverage percentage if possible
                         if '%' in coverage_line:
@@ -480,7 +480,7 @@ class TestRunner:
         for category, tests in self.results.items():
             if isinstance(tests, dict):
                 for test_name, result in tests.items():
-                    if result.get('status') == 'failed':
+                    if isinstance(result, dict) and result.get('status') == 'failed':
                         return False
         return True
 

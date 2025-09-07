@@ -42,21 +42,21 @@ func (l LogLevel) String() string {
 
 // LogEntry represents a structured log entry
 type LogEntry struct {
-	Timestamp    time.Time              `json:"timestamp"`
-	Level        string                 `json:"level"`
-	Message      string                 `json:"message"`
-	Service      string                 `json:"service"`
-	Component    string                 `json:"component"`
-	TraceID      string                 `json:"trace_id,omitempty"`
-	UserID       string                 `json:"user_id,omitempty"`
-	RequestID    string                 `json:"request_id,omitempty"`
-	File         string                 `json:"file"`
-	Line         int                    `json:"line"`
-	Function     string                 `json:"function"`
-	Duration     *time.Duration         `json:"duration,omitempty"`
-	Error        string                 `json:"error,omitempty"`
-	Fields       map[string]interface{} `json:"fields,omitempty"`
-	Tags         []string               `json:"tags,omitempty"`
+	Timestamp time.Time              `json:"timestamp"`
+	Level     string                 `json:"level"`
+	Message   string                 `json:"message"`
+	Service   string                 `json:"service"`
+	Component string                 `json:"component"`
+	TraceID   string                 `json:"trace_id,omitempty"`
+	UserID    string                 `json:"user_id,omitempty"`
+	RequestID string                 `json:"request_id,omitempty"`
+	File      string                 `json:"file"`
+	Line      int                    `json:"line"`
+	Function  string                 `json:"function"`
+	Duration  *time.Duration         `json:"duration,omitempty"`
+	Error     string                 `json:"error,omitempty"`
+	Fields    map[string]interface{} `json:"fields,omitempty"`
+	Tags      []string               `json:"tags,omitempty"`
 }
 
 // Logger represents the structured logger
@@ -79,11 +79,11 @@ const (
 
 // Config represents logger configuration
 type Config struct {
-	Level     string            `json:"level"`
-	Format    string            `json:"format"`
-	Service   string            `json:"service"`
-	Component string            `json:"component"`
-	Output    string            `json:"output"`
+	Level     string                 `json:"level"`
+	Format    string                 `json:"format"`
+	Service   string                 `json:"service"`
+	Component string                 `json:"component"`
+	Output    string                 `json:"output"`
 	Fields    map[string]interface{} `json:"fields"`
 }
 
@@ -186,6 +186,11 @@ func (l *Logger) WithComponent(component string) *Logger {
 	return &newLogger
 }
 
+// SetOutput sets the output destination for the logger
+func (l *Logger) SetOutput(w io.Writer) {
+	l.output = w
+}
+
 // Debug logs a debug message
 func (l *Logger) Debug(message string) {
 	l.log(DEBUG, message, nil)
@@ -261,22 +266,22 @@ func (l *Logger) Fatalf(format string, args ...interface{}) {
 // LogHTTPRequest logs HTTP request details
 func (l *Logger) LogHTTPRequest(method, path, userAgent, remoteAddr string, statusCode int, duration time.Duration) {
 	l.WithFields(map[string]interface{}{
-		"http_method":     method,
-		"http_path":       path,
-		"http_user_agent": userAgent,
+		"http_method":      method,
+		"http_path":        path,
+		"http_user_agent":  userAgent,
 		"http_remote_addr": remoteAddr,
 		"http_status_code": statusCode,
-		"duration":        duration.String(),
+		"duration":         duration.String(),
 	}).Info("HTTP request processed")
 }
 
 // LogDatabaseOperation logs database operation details
 func (l *Logger) LogDatabaseOperation(operation, table string, duration time.Duration, rowsAffected int64) {
 	l.WithFields(map[string]interface{}{
-		"db_operation":    operation,
-		"db_table":        table,
+		"db_operation":     operation,
+		"db_table":         table,
 		"db_rows_affected": rowsAffected,
-		"duration":        duration.String(),
+		"duration":         duration.String(),
 	}).Debug("Database operation completed")
 }
 
@@ -286,11 +291,11 @@ func (l *Logger) LogBusinessEvent(event string, entityID string, fields map[stri
 		"business_event": event,
 		"entity_id":      entityID,
 	}
-	
+
 	for k, v := range fields {
 		logFields[k] = v
 	}
-	
+
 	l.WithFields(logFields).Info("Business event occurred")
 }
 
@@ -396,7 +401,7 @@ func (l *Logger) writeEntry(entry LogEntry) {
 		if jsonBytes, err := json.Marshal(entry); err == nil {
 			output = string(jsonBytes)
 		} else {
-			output = fmt.Sprintf(`{"level":"ERROR","message":"Failed to marshal log entry: %s","timestamp":"%s"}`, 
+			output = fmt.Sprintf(`{"level":"ERROR","message":"Failed to marshal log entry: %s","timestamp":"%s"}`,
 				err.Error(), time.Now().UTC().Format(time.RFC3339))
 		}
 	case TEXT:
@@ -409,7 +414,7 @@ func (l *Logger) writeEntry(entry LogEntry) {
 // formatTextEntry formats a log entry as human-readable text
 func (l *Logger) formatTextEntry(entry LogEntry) string {
 	timestamp := entry.Timestamp.Format("2006-01-02 15:04:05")
-	
+
 	baseMsg := fmt.Sprintf("[%s] %s [%s/%s] %s:%d %s - %s",
 		timestamp, entry.Level, entry.Service, entry.Component,
 		entry.File, entry.Line, entry.Function, entry.Message)
@@ -442,7 +447,7 @@ func getCaller() (file string, line int, function string) {
 	}
 
 	file = filepath.Base(fullFile)
-	
+
 	if fn := runtime.FuncForPC(pc); fn != nil {
 		function = filepath.Base(fn.Name())
 	} else {

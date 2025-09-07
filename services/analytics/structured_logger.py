@@ -5,7 +5,7 @@ import os
 import time
 import traceback
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Union
 from functools import wraps
 from contextlib import contextmanager
@@ -21,7 +21,7 @@ class StructuredFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         """Format log record as JSON"""
         log_entry = {
-            "timestamp": datetime.utcfromtimestamp(record.created).isoformat() + "Z",
+            "timestamp": datetime.fromtimestamp(record.created, timezone.utc).isoformat().replace('+00:00', 'Z'),
             "level": record.levelname,
             "message": record.getMessage(),
             "service": self.service_name,
@@ -69,7 +69,7 @@ class TextFormatter(logging.Formatter):
         
     def format(self, record: logging.LogRecord) -> str:
         """Format log record as human-readable text"""
-        timestamp = datetime.utcfromtimestamp(record.created).strftime('%Y-%m-%d %H:%M:%S')
+        timestamp = datetime.fromtimestamp(record.created, timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
         component = self.component or getattr(record, 'component', '')
         
         base_msg = f"[{timestamp}] {record.levelname} [{self.service_name}/{component}] {record.filename}:{record.lineno} {record.funcName} - {record.getMessage()}"
@@ -117,7 +117,11 @@ class StructuredLogger:
         
         # Create handler
         if output_file:
-            handler = logging.FileHandler(output_file)
+            try:
+                handler = logging.FileHandler(output_file)
+            except (FileNotFoundError, PermissionError, OSError):
+                # Fall back to stdout if file cannot be created
+                handler = logging.StreamHandler(sys.stdout)
         else:
             handler = logging.StreamHandler(sys.stdout)
         
@@ -139,13 +143,23 @@ class StructuredLogger:
     
     def with_component(self, component: str) -> 'StructuredLogger':
         """Create a new logger with a different component"""
-        return StructuredLogger(
+        # Convert numeric level back to string
+        level_name = logging.getLevelName(self.logger.level)
+        new_logger = StructuredLogger(
             self.service_name, 
             component, 
-            self.logger.level, 
+            level_name, 
             "JSON",  # Assume JSON for consistency
             None
         )
+        
+        # Inherit the output stream from the current logger
+        if self.logger.handlers:
+            original_handler = self.logger.handlers[0]
+            new_handler = new_logger.logger.handlers[0]
+            new_handler.stream = original_handler.stream
+        
+        return new_logger
     
     def debug(self, message: str, **kwargs):
         """Log debug message"""
