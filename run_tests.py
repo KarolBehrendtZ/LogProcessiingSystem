@@ -44,7 +44,6 @@ class TestRunner:
             print("⚠ Go service directory not found, skipping Go tests")
             return {"status": "skipped", "reason": "directory not found"}
         
-        # Check if Go is available
         try:
             result = subprocess.run(['go', 'version'], capture_output=True, text=True)
             if result.returncode != 0:
@@ -56,22 +55,18 @@ class TestRunner:
         
         test_results = {}
         
-        # Test logger package
         print("\n🧪 Testing logger package...")
         logger_result = self.run_go_package_tests(go_service_path / "logger")
         test_results['logger'] = logger_result
         
-        # Test middleware package
         print("\n🧪 Testing middleware package...")
         middleware_result = self.run_go_package_tests(go_service_path / "middleware")
         test_results['middleware'] = middleware_result
-        
-        # Test handlers package
+
         print("\n🧪 Testing handlers package...")
         handlers_result = self.run_go_package_tests(go_service_path / "handlers")
         test_results['handlers'] = handlers_result
         
-        # Run benchmarks
         print("\n📊 Running Go benchmarks...")
         benchmark_result = self.run_go_benchmarks(go_service_path)
         test_results['benchmarks'] = benchmark_result
@@ -86,7 +81,7 @@ class TestRunner:
         os.chdir(package_path)
         
         try:
-            # Run tests with verbose output and coverage
+
             cmd = ['go', 'test', '-v', '-cover', '-coverprofile=coverage.out']
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
             
@@ -94,8 +89,7 @@ class TestRunner:
             
             if result.returncode == 0:
                 print(f"✅ {package_path.name} tests passed")
-                
-                # Extract coverage information
+
                 coverage = self.extract_go_coverage(test_output)
                 
                 return {
@@ -130,7 +124,6 @@ class TestRunner:
         os.chdir(service_path)
         
         try:
-            # Run benchmarks
             cmd = ['go', 'test', '-bench=.', '-benchmem', './...']
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
             
@@ -175,7 +168,6 @@ class TestRunner:
         
         test_results = {}
         
-        # Test structured logger
         print("\n🧪 Testing structured logger...")
         logger_result = self.run_python_unittest(analytics_path / "test_structured_logger.py")
         test_results['structured_logger'] = logger_result
@@ -196,7 +188,6 @@ class TestRunner:
         
         test_results = {}
         
-        # Run integration tests
         print("\n🧪 Testing integration scenarios...")
         integration_result = self.run_python_unittest(analytics_path / "test_integration.py")
         test_results['integration'] = integration_result
@@ -209,10 +200,8 @@ class TestRunner:
             return {"status": "skipped", "reason": "test file not found"}
         
         try:
-            # Change to the directory containing the test
             os.chdir(test_file.parent)
-            
-            # Run the unittest
+
             cmd = [sys.executable, test_file.name]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
             
@@ -255,7 +244,6 @@ class TestRunner:
         
         test_results = {}
         
-        # Run the comprehensive logging test
         print("\n🧪 Testing logging functionality...")
         logging_test_file = self.project_root / "test_logging.py"
         
@@ -345,54 +333,90 @@ class TestRunner:
         print("COMPREHENSIVE TEST REPORT")
         print("=" * 80)
         
-        # Summary section
         print(f"\n📊 SUMMARY")
         print(f"Total Duration: {self.results['total_duration']:.2f} seconds")
         
-        # Go tests summary
         if self.results.get('go_tests'):
             print(f"\n🔵 GO TESTS")
             for package, result in self.results['go_tests'].items():
-                status_emoji = "✅" if result.get('status') == 'passed' else "❌" if result.get('status') == 'failed' else "⚠️"
+                match result.get('status'):
+                    case 'passed':
+                        status_emoji = "✅"
+                    case 'failed':
+                        status_emoji = "❌"
+                    case _:
+                        status_emoji = "⚠️"
                 print(f"  {status_emoji} {package}: {result.get('status', 'unknown')}")
                 if result.get('coverage'):
                     print(f"    Coverage: {result['coverage']}")
+
+        if self.results.get('python_tests'):
+            print(f"\n🐍 PYTHON UNIT TESTS")
+            for test_name, result in self.results['python_tests'].items():
+                match result.get('status'):
+                    case 'passed':
+                        status_emoji = "✅"
+                    case 'failed':
+                        status_emoji = "❌"
+                    case _:
+                        status_emoji = "⚠️"
+                print(f"  {status_emoji} {test_name}: {result.get('status', 'unknown')}")
+
+        if self.results.get('integration_tests'):
+            print(f"\n🔗 INTEGRATION TESTS")
+            for test_name, result in self.results['integration_tests'].items():
+                match result.get('status'):
+                    case 'passed':
+                        status_emoji = "✅"
+                    case 'failed':
+                        status_emoji = "❌"
+                    case _:
+                        status_emoji = "⚠️"
+                print(f"  {status_emoji} {test_name}: {result.get('status', 'unknown')}")
+
+        if self.results.get('performance_tests'):
+            print(f"\n🚀 PERFORMANCE TESTS")
+            for test_name, result in self.results['performance_tests'].items():
+                match result.get('status'):
+                    case 'passed':
+                        status_emoji = "✅"
+                    case 'failed':
+                        status_emoji = "❌"
+                    case _:
+                        status_emoji = "⚠️"
+                print(f"  {status_emoji} {test_name}: {result.get('status', 'unknown')}")
         
-        # Python tests summary
+
         if self.results.get('python_tests'):
             print(f"\n🐍 PYTHON UNIT TESTS")
             for test_name, result in self.results['python_tests'].items():
                 status_emoji = "✅" if result.get('status') == 'passed' else "❌" if result.get('status') == 'failed' else "⚠️"
                 print(f"  {status_emoji} {test_name}: {result.get('status', 'unknown')}")
         
-        # Integration tests summary
         if self.results.get('integration_tests'):
             print(f"\n🔗 INTEGRATION TESTS")
             for test_name, result in self.results['integration_tests'].items():
                 status_emoji = "✅" if result.get('status') == 'passed' else "❌" if result.get('status') == 'failed' else "⚠️"
                 print(f"  {status_emoji} {test_name}: {result.get('status', 'unknown')}")
         
-        # Performance tests summary
         if self.results.get('performance_tests'):
             print(f"\n🚀 PERFORMANCE TESTS")
             for test_name, result in self.results['performance_tests'].items():
                 status_emoji = "✅" if result.get('status') == 'passed' else "❌" if result.get('status') == 'failed' else "⚠️"
                 print(f"  {status_emoji} {test_name}: {result.get('status', 'unknown')}")
         
-        # Recommendations
         print(f"\n💡 RECOMMENDATIONS")
         recommendations = self.generate_recommendations()
         for rec in recommendations:
             print(f"  • {rec}")
         
-        # Save detailed report
         self.save_detailed_report()
     
     def generate_recommendations(self) -> List[str]:
         """Generate recommendations based on test results"""
         recommendations = []
-        
-        # Check for failed tests
+        max_duration_min = 5*60
+
         failed_tests = []
         for category, tests in self.results.items():
             if isinstance(tests, dict):
@@ -403,7 +427,6 @@ class TestRunner:
         if failed_tests:
             recommendations.append(f"Fix failing tests: {', '.join(failed_tests)}")
         
-        # Check for skipped tests
         skipped_tests = []
         for category, tests in self.results.items():
             if isinstance(tests, dict):
@@ -414,17 +437,14 @@ class TestRunner:
         if skipped_tests:
             recommendations.append(f"Investigate skipped tests: {', '.join(skipped_tests)}")
         
-        # Performance recommendations
-        if self.results.get('total_duration', 0) > 300:  # 5 minutes
+        if self.results.get('total_duration', 0) > max_duration_min:  
             recommendations.append("Consider optimizing test performance - tests taking too long")
         
-        # Coverage recommendations
         for category, tests in self.results.items():
             if isinstance(tests, dict):
                 for test_name, result in tests.items():
                     if isinstance(result, dict) and result.get('coverage') and 'coverage:' in result['coverage']:
                         coverage_line = result['coverage']
-                        # Extract coverage percentage if possible
                         if '%' in coverage_line:
                             coverage_str = coverage_line.split('%')[0].split()[-1]
                             try:
@@ -457,22 +477,16 @@ class TestRunner:
         print("🚀 Starting comprehensive test suite for Log Processing System")
         print(f"📁 Project root: {self.project_root}")
         
-        # Run Go tests
         self.results['go_tests'] = self.run_go_tests()
         
-        # Run Python unit tests
         self.results['python_tests'] = self.run_python_tests()
         
-        # Run Python integration tests
         self.results['integration_tests'] = self.run_python_integration_tests()
         
-        # Run logging functionality tests
         self.results['performance_tests'] = self.run_logging_functionality_tests()
         
-        # Generate final report
         self.generate_test_report()
         
-        # Return overall success status
         return self.calculate_overall_success()
     
     def calculate_overall_success(self) -> bool:

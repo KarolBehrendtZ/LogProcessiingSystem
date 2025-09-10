@@ -8,7 +8,6 @@ import time
 from unittest.mock import patch, MagicMock
 from contextlib import redirect_stdout, redirect_stderr
 
-# Add the parent directory to sys.path to import structured_logger
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from structured_logger import (
@@ -94,7 +93,6 @@ class TestStructuredFormatter(unittest.TestCase):
             func="test_function"
         )
         
-        # Add extra fields
         record.user_id = "user123"
         record.request_id = "req456"
         record.custom_field = {"nested": "value"}
@@ -111,7 +109,6 @@ class TestStructuredFormatter(unittest.TestCase):
         """Test log formatting with thread context"""
         import logging
         
-        # Set thread context
         threading.current_thread().log_context = {
             "trace_id": "trace123",
             "operation": "test_op"
@@ -134,7 +131,6 @@ class TestStructuredFormatter(unittest.TestCase):
         self.assertEqual(log_data["trace_id"], "trace123")
         self.assertEqual(log_data["operation"], "test_op")
         
-        # Clean up
         delattr(threading.current_thread(), 'log_context')
 
 class TestTextFormatter(unittest.TestCase):
@@ -181,7 +177,6 @@ class TestStructuredLogger(unittest.TestCase):
             level=level,
             format_type=format_type
         )
-        # Replace handler to use our buffer
         logger.logger.handlers[0].stream = self.output_buffer
         return logger
     
@@ -221,15 +216,15 @@ class TestStructuredLogger(unittest.TestCase):
         """Test log level filtering"""
         logger = self.create_test_logger(level="WARNING")
         
-        logger.debug("Debug message")  # Should not appear
-        logger.info("Info message")    # Should not appear
-        logger.warning("Warning message")  # Should appear
-        logger.error("Error message")      # Should appear
+        logger.debug("Debug message") 
+        logger.info("Info message")   
+        logger.warning("Warning message")  
+        logger.error("Error message")     
         
         output = self.output_buffer.getvalue()
         lines = output.strip().split('\n')
         
-        # Only warning and error should be logged
+
         self.assertEqual(len(lines), 2)
         
         warning_log = json.loads(lines[0])
@@ -248,9 +243,6 @@ class TestStructuredLogger(unittest.TestCase):
         output = self.output_buffer.getvalue()
         log_data = json.loads(output.strip())
         
-        # Note: The context is stored in thread-local storage
-        # The actual fields are added via the extra parameter in logging
-    
     def test_component_override(self):
         """Test with_component method"""
         logger = self.create_test_logger()
@@ -267,16 +259,12 @@ class TestStructuredLogger(unittest.TestCase):
         """Test specialized logging methods"""
         logger = self.create_test_logger()
         
-        # Test performance logging
         logger.log_performance("test_operation", 0.150, status="success")
         
-        # Test business event logging
         logger.log_business_event("user_login", "user123", method="oauth")
         
-        # Test database operation logging
         logger.log_database_operation("SELECT", "users", 0.050, 10)
         
-        # Test API call logging
         logger.log_api_call("GET", "/api/users", 200, 0.120)
         
         output = self.output_buffer.getvalue()
@@ -284,23 +272,19 @@ class TestStructuredLogger(unittest.TestCase):
         
         self.assertEqual(len(lines), 4)
         
-        # Check performance log
         perf_log = json.loads(lines[0])
         self.assertIn("Performance:", perf_log["message"])
         self.assertEqual(perf_log["fields"]["operation"], "test_operation")
         self.assertEqual(perf_log["fields"]["duration_ms"], 150.0)
-        
-        # Check business event log
+
         business_log = json.loads(lines[1])
         self.assertIn("Business event:", business_log["message"])
         self.assertEqual(business_log["fields"]["business_event"], "user_login")
-        
-        # Check database operation log
+
         db_log = json.loads(lines[2])
         self.assertIn("Database operation:", db_log["message"])
         self.assertEqual(db_log["fields"]["db_operation"], "SELECT")
-        
-        # Check API call log
+
         api_log = json.loads(lines[3])
         self.assertIn("API call:", api_log["message"])
         self.assertEqual(api_log["fields"]["api_status_code"], 200)
@@ -322,16 +306,12 @@ class TestLogContext(unittest.TestCase):
         with log_context(operation="test_op", user_id="user123"):
             self.logger.info("Message with context")
         
-        # Context should be cleared after exiting
         self.logger.info("Message without context")
         
         output = self.output_buffer.getvalue()
         lines = output.strip().split('\n')
         
         self.assertEqual(len(lines), 2)
-        
-        # First message should have context (in thread local)
-        # Second message should not have context
     
     def test_nested_contexts(self):
         """Test nested log contexts"""
@@ -362,7 +342,7 @@ class TestDecorators(unittest.TestCase):
         
         @performance_monitor(self.logger, "test_operation")
         def test_function():
-            time.sleep(0.01)  # Small delay
+            time.sleep(0.01)
             return "result"
         
         result = test_function()
@@ -372,10 +352,8 @@ class TestDecorators(unittest.TestCase):
         output = self.output_buffer.getvalue()
         lines = output.strip().split('\n')
         
-        # Should have start and performance logs
         self.assertGreaterEqual(len(lines), 2)
         
-        # Check for performance log
         found_performance_log = False
         for line in lines:
             log_data = json.loads(line)
@@ -400,10 +378,8 @@ class TestDecorators(unittest.TestCase):
         output = self.output_buffer.getvalue()
         lines = output.strip().split('\n')
         
-        # Should have logs including error
         self.assertGreater(len(lines), 0)
         
-        # Check for performance log with error status
         found_error_performance_log = False
         for line in lines:
             log_data = json.loads(line)
@@ -429,7 +405,6 @@ class TestDecorators(unittest.TestCase):
         
         self.assertGreater(len(lines), 0)
         
-        # Check for exception log
         found_exception_log = False
         for line in lines:
             log_data = json.loads(line)
@@ -451,17 +426,13 @@ class TestEnvironmentIntegration(unittest.TestCase):
         """Test logger creation from environment variables"""
         logger = create_logger_from_env("env-service", "env-component")
         
-        # Verify configuration was loaded from environment
         self.assertEqual(logger.service_name, "env-service")
         self.assertEqual(logger.component, "env-component")
-        # Note: Internal logger level checking would require more setup
     
     def test_default_logger_initialization(self):
         """Test default logger initialization and usage"""
-        # Initialize default logger
         init_default_logger("default-service", "default-component")
         
-        # Test that we can get the logger
         default_logger = get_logger()
         self.assertIsNotNone(default_logger)
         self.assertEqual(default_logger.service_name, "default-service")
@@ -469,7 +440,6 @@ class TestEnvironmentIntegration(unittest.TestCase):
     
     def test_default_logger_not_initialized(self):
         """Test error when using default logger before initialization"""
-        # Clear any existing default logger
         import structured_logger
         structured_logger._default_logger = None
         
@@ -499,14 +469,12 @@ class TestTextOutput(unittest.TestCase):
         self.assertIn("Test text message", output)
         self.assertIn("text-service", output)
         self.assertIn("text-component", output)
-        # Fields should be in JSON format within the text output
         self.assertIn("user_id", output)
 
 class TestErrorHandling(unittest.TestCase):
     
     def test_logger_with_invalid_output_file(self):
         """Test logger creation with invalid output file"""
-        # Try to create logger with invalid file path
         logger = StructuredLogger(
             service_name="test-service",
             component="test-component",
@@ -515,7 +483,6 @@ class TestErrorHandling(unittest.TestCase):
             output_file="/invalid/path/file.log"
         )
         
-        # Should fall back to stdout and not crash
         self.assertIsNotNone(logger)
     
     def test_json_serialization_error_handling(self):
@@ -529,23 +496,18 @@ class TestErrorHandling(unittest.TestCase):
         )
         logger.logger.handlers[0].stream = output_buffer
         
-        # Create a non-serializable object
         class NonSerializable:
             pass
         
         non_serializable = NonSerializable()
         
-        # This should not crash, but convert to string
         logger.info("Test message", non_serializable_object=non_serializable)
         
         output = output_buffer.getvalue()
         self.assertIn("Test message", output)
-        # The non-serializable object should be converted to string representation
 
 if __name__ == '__main__':
-    # Set up test environment
     os.environ.setdefault('LOG_LEVEL', 'DEBUG')
     os.environ.setdefault('LOG_FORMAT', 'JSON')
     
-    # Run tests
     unittest.main(verbosity=2)
